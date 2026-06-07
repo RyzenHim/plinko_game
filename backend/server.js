@@ -3,13 +3,12 @@ const express = require("express");
 const app = express();
 const port = process.env.PORT || 5000;
 const cors = require("cors");
-const allowedOrigins = process.env.CORS_ORIGIN.split(",");
 
 app.use(
   cors({
     origin: [
       "https://plinko-game-eight-ashen.vercel.app",
-      "http://localhost:5173",
+      "http://localhost:3000",
     ],
     credentials: true,
   }),
