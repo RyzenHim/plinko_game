@@ -26,7 +26,9 @@ export default function HomePage() {
   const [landingHistory, setLandingHistory] = useState([]);
   const secretBufferRef = useRef("");
 
-  const isGolden = landingHistory.length >= 3 && landingHistory.slice(-3).every((b) => b === 6);
+  const isGolden =
+    landingHistory.length >= 3 &&
+    landingHistory.slice(-3).every((b) => b === 6);
 
   const initRound = async () => {
     try {
@@ -68,20 +70,23 @@ export default function HomePage() {
     }
   }, [isDropping, currentRound, clientSeed, betAmount, dropColumn]);
 
-  const onLanding = useCallback(({ binIndex, multiplier }) => {
-    const payout = betAmount * multiplier;
-    setLandingHistory((prev) => [...prev.slice(-9), binIndex]);
-    setRecentResults((prev) => [
-      {
-        id: `${currentRound?.roundId}-${Date.now()}`,
-        roundId: currentRound?.roundId,
-        binIndex,
-        multiplier,
-        payout,
-      },
-      ...prev.slice(0, 19),
-    ]);
-  }, [betAmount, currentRound]);
+  const onLanding = useCallback(
+    ({ binIndex, multiplier }) => {
+      const payout = betAmount * multiplier;
+      setLandingHistory((prev) => [...prev.slice(-9), binIndex]);
+      setRecentResults((prev) => [
+        {
+          id: `${currentRound?.roundId}-${Date.now()}`,
+          roundId: currentRound?.roundId,
+          binIndex,
+          multiplier,
+          payout,
+        },
+        ...prev.slice(0, 19),
+      ]);
+    },
+    [betAmount, currentRound],
+  );
 
   const onAnimationComplete = async () => {
     setIsDropping(false);
@@ -92,6 +97,8 @@ export default function HomePage() {
     }
 
     try {
+      // Only reveal if current round is not already revealed.
+      // (Prevents repeated reveal calls from hitting backend 400s.)
       const reveal = await roundsService.reveal(currentRound.roundId);
       setRevealedSeed(reveal.serverSeed);
       setTimeout(initRound, 2500);
@@ -123,7 +130,9 @@ export default function HomePage() {
       // Secret theme: "open sesame"
       if (e.key.length === 1) {
         const target = "open sesame";
-        secretBufferRef.current = (secretBufferRef.current + e.key.toLowerCase()).slice(-target.length);
+        secretBufferRef.current = (
+          secretBufferRef.current + e.key.toLowerCase()
+        ).slice(-target.length);
         if (secretBufferRef.current === target) {
           setIsDungeon(true);
           setDungeonRoundsLeft(1);
@@ -188,8 +197,8 @@ export default function HomePage() {
                       m >= 5
                         ? "text-amber-400/80 bg-amber-500/10"
                         : m >= 2
-                        ? "text-violet-400/70 bg-violet-500/10"
-                        : "text-zinc-600 bg-white/[0.02]"
+                          ? "text-violet-400/70 bg-violet-500/10"
+                          : "text-zinc-600 bg-white/[0.02]"
                     }`}
                   >
                     {m}x
