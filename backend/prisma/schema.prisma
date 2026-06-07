@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+
+}
+
+enum RoundStatus {
+  CREATED
+  STARTED
+  REVEALED
+}
+
+model Round {
+  id                String      @id @default(uuid())
+  createdAt         DateTime    @default(now())
+  status            RoundStatus @default(CREATED)
+
+  // Fairness
+  nonce             String
+  commitHex         String
+  serverSeed        String?     // Nullable until REVEALED
+
+  clientSeed        String
+  combinedSeed      String
+  pegMapHash        String
+
+  // Game Parameters
+  rows              Int
+  dropColumn        Int
+  binIndex          Int
+  payoutMultiplier  Float
+  betCents          Int
+  pathJson          Json
+
+  revealedAt        DateTime?
+}
