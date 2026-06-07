@@ -7,13 +7,10 @@ const allowedOrigins = process.env.CORS_ORIGIN.split(",");
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS not allowed"));
-      }
-    },
+    origin: [
+      "https://plinko-game-eight-ashen.vercel.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
   }),
 );
