@@ -22,4 +22,3 @@ const verifyRoutes = require("./src/routes/verify.routes");
 app.use("/api/verify", verifyRoutes);
 
 app.listen(port, () => console.log("The  server is running on port :-", port));
-console.log(process.env.CORS_ORIGIN);
