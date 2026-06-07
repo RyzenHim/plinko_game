@@ -59,7 +59,9 @@ async function startRound(req, res) {
     }
 
     if (round.status !== "CREATED") {
-      return res.status(400).json({ error: "Round already started or revealed." });
+      return res
+        .status(400)
+        .json({ error: "Round already started or revealed." });
     }
 
     const { combinedSeed, outcome } = plinkoService.executeRound({
@@ -110,6 +112,13 @@ async function revealRound(req, res) {
 
     if (!round) {
       return res.status(404).json({ error: "Round not found." });
+    }
+
+    if (round.status === "REVEALED") {
+      // Make reveal idempotent: if already revealed, return the serverSeed again.
+      return res.status(200).json({
+        serverSeed: round.serverSeed,
+      });
     }
 
     if (round.status !== "STARTED") {
