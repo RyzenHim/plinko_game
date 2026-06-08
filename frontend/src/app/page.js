@@ -9,6 +9,7 @@ import FairnessPanel from "../components/FairnessPanel";
 import RecentResults from "../components/RecentResults";
 import BackgroundEffects from "../components/BackgroundEffects";
 import { PAYOUTS } from "../utils/plinkoCoords";
+import NeonLoadingOverlay from "../components/NeonLoadingOverlay";
 
 export default function HomePage() {
   const [currentRound, setCurrentRound] = useState(null);
@@ -31,6 +32,8 @@ export default function HomePage() {
   // ✅ Drop guard — prevents any double-drop race condition
   const droppingRef = useRef(false);
 
+  const [isServerLoading, setIsServerLoading] = useState(true);
+
   const isGolden =
     landingHistory.length >= 3 &&
     landingHistory.slice(-3).every((b) => b === 6);
@@ -41,6 +44,7 @@ export default function HomePage() {
       setCurrentRound(round);
       setOutcome(null);
       setRevealedSeed(null);
+      setIsServerLoading(false);
     } catch (error) {
       console.error("Failed to init round", error);
     }
@@ -160,6 +164,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen relative">
+      <NeonLoadingOverlay visible={isServerLoading} />
       <BackgroundEffects />
 
       <div className="relative z-10 px-4 md:px-8 py-6 md:py-10 max-w-[1400px] mx-auto">
