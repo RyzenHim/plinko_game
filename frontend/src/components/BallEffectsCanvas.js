@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useCallback } from "react";
 
-const MAX_TRAIL = 10;
+const MAX_TRAIL = 14;
 
 /**
- * GPU canvas overlay: cinematic trail + precise collision sparks.
- * All effects are canvas-only — no React state, no re-renders.
+ * Canvas overlay — cinematic ball trail + precision peg collision effects.
+ * Matches the screenshot: deep blue-white energy trail, crisp cyan ripples,
+ * soft flash blooms at each peg impact.
  */
 export function useBallEffectsCanvas() {
   const apiRef = useRef({
@@ -25,10 +26,12 @@ export function useBallEffectsCanvas() {
     const flashes = [];
     const ripples = [];
     let size = { w: 0, h: 0 };
+    let dpr = 1;
 
-    const mapPoint = (svgX, svgY) => {
-      const parts = viewBox.split(" ").map(Number);
-      const [vbX, , vbW, vbH] = parts;
+    // Parse viewbox for coordinate mapping
+    const [vbX, , vbW, vbH] = viewBox.split(" ").map(Number);
+
+    const mapPt = (svgX, svgY) => {
       const rect = canvasEl.parentElement?.getBoundingClientRect();
       if (!rect) return { x: 0, y: 0 };
       return {
@@ -41,7 +44,7 @@ export function useBallEffectsCanvas() {
       const parent = canvasEl.parentElement;
       if (!parent) return;
       const rect = parent.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
       canvasEl.width = rect.width * dpr;
       canvasEl.height = rect.height * dpr;
       canvasEl.style.width = `${rect.width}px`;
@@ -58,36 +61,36 @@ export function useBallEffectsCanvas() {
     apiRef.current = {
       addTrailPoint: (svgX, svgY, velocity, isGolden) => {
         trail.push({
-          ...mapPoint(svgX, svgY),
+          ...mapPt(svgX, svgY),
           life: 1,
-          velocity,
-          isGolden,
+          velocity: velocity ?? 0,
+          isGolden: !!isGolden,
           born: performance.now(),
         });
         if (trail.length > MAX_TRAIL) trail.shift();
       },
 
       addSparks: (svgX, svgY) => {
-        const origin = mapPoint(svgX, svgY);
+        const { x, y } = mapPt(svgX, svgY);
         const now = performance.now();
 
-        // Bright localized flash
-        flashes.push({ x: origin.x, y: origin.y, born: now, duration: 90 });
+        // Bright impact flash
+        flashes.push({ x, y, born: now, dur: 95 });
 
-        // Crisp expanding ring
-        ripples.push({ x: origin.x, y: origin.y, born: now, duration: 110 });
+        // Expanding ring
+        ripples.push({ x, y, born: now, dur: 120 });
 
-        // 5 micro spark particles (fan upward)
-        for (let i = 0; i < 5; i++) {
-          const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
-          const speed = 0.5 + Math.random() * 1.1;
+        // 6 micro sparks fanning upward
+        for (let i = 0; i < 6; i++) {
+          const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
+          const spd = 0.6 + Math.random() * 1.4;
           sparks.push({
-            x: origin.x,
-            y: origin.y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed - 0.3,
+            x,
+            y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd - 0.4,
             born: now,
-            duration: 140,
+            dur: 150 + Math.random() * 60,
           });
         }
       },
@@ -98,118 +101,153 @@ export function useBallEffectsCanvas() {
         ctx.clearRect(0, 0, size.w, size.h);
         const now = performance.now();
 
-        // ── Trail ────────────────────────────────────────────
-        for (let i = 1; i < trail.length; i++) {
-          const p = trail[i];
-          const prev = trail[i - 1];
-          const age = (now - p.born) / 200;
-          p.life = Math.max(0, 1 - age);
-          if (p.life <= 0 || prev.life <= 0) continue;
+        // ── Trail ──────────────────────────────────────────────────────────
+        // Two-pass: wide soft glow then sharp core line
+        for (let pass = 0; pass < 2; pass++) {
+          for (let i = 1; i < trail.length; i++) {
+            const p = trail[i];
+            const prev = trail[i - 1];
 
-          const progress = i / trail.length;
-          const speedBoost = Math.min(1.2, 0.3 + p.velocity * 0.035);
-          const alpha = p.life * 0.38 * Math.pow(progress, 1.8) * speedBoost;
-          const width = 9 * progress * 0.55;
+            const age = (now - p.born) / 220;
+            p.life = Math.max(0, 1 - age);
+            if (p.life <= 0) continue;
 
-          const color = p.isGolden ? "251,191,36" : "210,220,255";
-          const grad = ctx.createLinearGradient(prev.x, prev.y, p.x, p.y);
-          grad.addColorStop(0, `rgba(${color},0)`);
-          grad.addColorStop(1, `rgba(${color},${alpha.toFixed(3)})`);
+            const progress = i / trail.length;
+            const speedFact = Math.min(1.3, 0.25 + p.velocity * 0.03);
+            const baseAlpha = p.life * Math.pow(progress, 1.6) * speedFact;
 
-          ctx.save();
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = width;
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.moveTo(prev.x, prev.y);
-          ctx.lineTo(p.x, p.y);
-          ctx.stroke();
-          ctx.restore();
-
-          // Soft radial glow dot at each point
-          const dotGrad = ctx.createRadialGradient(
-            p.x,
-            p.y,
-            0,
-            p.x,
-            p.y,
-            width * 1.2,
-          );
-          dotGrad.addColorStop(0, `rgba(${color},${(alpha * 0.5).toFixed(3)})`);
-          dotGrad.addColorStop(1, `rgba(${color},0)`);
-          ctx.save();
-          ctx.fillStyle = dotGrad;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, width * 1.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+            if (pass === 0) {
+              // Outer glow — wide, soft, blue-violet
+              const a = baseAlpha * 0.28;
+              const w = 14 * progress;
+              const col = p.isGolden ? "251,191,36" : "160,180,255";
+              const grad = ctx.createLinearGradient(prev.x, prev.y, p.x, p.y);
+              grad.addColorStop(0, `rgba(${col},0)`);
+              grad.addColorStop(1, `rgba(${col},${a.toFixed(3)})`);
+              ctx.save();
+              ctx.strokeStyle = grad;
+              ctx.lineWidth = w;
+              ctx.lineCap = "round";
+              ctx.globalCompositeOperation = "screen";
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(p.x, p.y);
+              ctx.stroke();
+              ctx.restore();
+            } else {
+              // Inner core — narrow, bright white-blue
+              const a = baseAlpha * 0.72;
+              const w = 3.5 * progress;
+              const col = p.isGolden ? "255,230,100" : "210,228,255";
+              const grad = ctx.createLinearGradient(prev.x, prev.y, p.x, p.y);
+              grad.addColorStop(0, `rgba(${col},0)`);
+              grad.addColorStop(1, `rgba(${col},${a.toFixed(3)})`);
+              ctx.save();
+              ctx.strokeStyle = grad;
+              ctx.lineWidth = w;
+              ctx.lineCap = "round";
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(p.x, p.y);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
         }
 
-        // ── Collision flashes ────────────────────────────────
-        for (const f of flashes) {
-          const progress = Math.min(1, (now - f.born) / f.duration);
-          const alpha = 0.75 * (1 - progress);
-          const radius = 6 * (1 - progress * 0.25);
-          if (alpha <= 0) continue;
+        // Radial glow dot at trail head
+        if (trail.length > 0) {
+          const head = trail[trail.length - 1];
+          if (head.life > 0.2) {
+            const col = head.isGolden ? "251,191,36" : "148,172,255";
+            const r = 8;
+            const grad = ctx.createRadialGradient(
+              head.x,
+              head.y,
+              0,
+              head.x,
+              head.y,
+              r,
+            );
+            grad.addColorStop(
+              0,
+              `rgba(${col},${(head.life * 0.5).toFixed(3)})`,
+            );
+            grad.addColorStop(1, `rgba(${col},0)`);
+            ctx.save();
+            ctx.fillStyle = grad;
+            ctx.globalCompositeOperation = "screen";
+            ctx.beginPath();
+            ctx.arc(head.x, head.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
 
-          const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, radius);
-          grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
-          grad.addColorStop(0.35, `rgba(130,200,255,${alpha * 0.5})`);
+        // ── Impact flashes ─────────────────────────────────────────────────
+        for (const f of flashes) {
+          const p = Math.min(1, (now - f.born) / f.dur);
+          const a = 0.78 * (1 - p);
+          if (a <= 0) continue;
+          const r = 5 + 3 * (1 - p);
+          const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
+          grad.addColorStop(0, `rgba(255,255,255,${a})`);
+          grad.addColorStop(0.4, `rgba(140,210,255,${a * 0.55})`);
           grad.addColorStop(1, "rgba(34,211,238,0)");
+          ctx.save();
+          ctx.globalCompositeOperation = "screen";
           ctx.fillStyle = grad;
           ctx.beginPath();
-          ctx.arc(f.x, f.y, radius, 0, Math.PI * 2);
+          ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         }
 
-        // ── Ripple rings ─────────────────────────────────────
-        for (const r of ripples) {
-          const progress = Math.min(1, (now - r.born) / r.duration);
-          const alpha = 0.55 * (1 - progress);
-          const radius = 3 + 10 * progress;
-          if (alpha <= 0) continue;
-
+        // ── Ripple rings ───────────────────────────────────────────────────
+        for (const rp of ripples) {
+          const p = Math.min(1, (now - rp.born) / rp.dur);
+          const a = 0.6 * (1 - p);
+          if (a <= 0) continue;
+          const r = 3.5 + 10 * p;
           ctx.save();
-          ctx.strokeStyle = `rgba(34,211,238,${alpha})`;
-          ctx.lineWidth = 0.8;
+          ctx.strokeStyle = `rgba(34,211,238,${a})`;
+          ctx.lineWidth = 0.9;
+          ctx.globalCompositeOperation = "screen";
           ctx.beginPath();
-          ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
+          ctx.arc(rp.x, rp.y, r, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         }
 
-        // ── Micro spark particles ────────────────────────────
+        // ── Micro sparks ───────────────────────────────────────────────────
         for (const s of sparks) {
-          const age = now - s.born;
-          const progress = Math.min(1, age / s.duration);
-          const alpha = 0.85 * (1 - progress);
-          if (alpha <= 0) continue;
-
-          const t = age / 1000;
-          const curX = s.x + s.vx * age * 0.055;
-          const curY = s.y + s.vy * age * 0.055 + 0.5 * 9.8 * t * t;
-          const r = 1.4 * (1 - progress * 0.5);
-
-          ctx.fillStyle = `rgba(150,210,255,${alpha})`;
+          const p = Math.min(1, (now - s.born) / s.dur);
+          const a = 0.88 * (1 - p);
+          if (a <= 0) continue;
+          const t = (now - s.born) / 1000;
+          const cx2 = s.x + s.vx * (now - s.born) * 0.06;
+          const cy2 = s.y + s.vy * (now - s.born) * 0.06 + 0.5 * 9.8 * t * t;
+          ctx.save();
+          ctx.fillStyle = `rgba(160,220,255,${a})`;
+          ctx.globalCompositeOperation = "screen";
           ctx.beginPath();
-          ctx.arc(curX, curY, r, 0, Math.PI * 2);
+          ctx.arc(cx2, cy2, 1.5 * (1 - p * 0.5), 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         }
 
-        // ── Cleanup ──────────────────────────────────────────
+        // ── Cleanup ────────────────────────────────────────────────────────
         for (let i = trail.length - 1; i >= 0; i--) {
           if (trail[i].life <= 0) trail.splice(i, 1);
         }
         for (let i = sparks.length - 1; i >= 0; i--) {
-          if (now - sparks[i].born >= sparks[i].duration) sparks.splice(i, 1);
+          if (now - sparks[i].born >= sparks[i].dur) sparks.splice(i, 1);
         }
         for (let i = flashes.length - 1; i >= 0; i--) {
-          if (now - flashes[i].born >= flashes[i].duration)
-            flashes.splice(i, 1);
+          if (now - flashes[i].born >= flashes[i].dur) flashes.splice(i, 1);
         }
         for (let i = ripples.length - 1; i >= 0; i--) {
-          if (now - ripples[i].born >= ripples[i].duration)
-            ripples.splice(i, 1);
+          if (now - ripples[i].born >= ripples[i].dur) ripples.splice(i, 1);
         }
       },
 
@@ -229,9 +267,6 @@ export function useBallEffectsCanvas() {
   return { apiRef, attachCanvas };
 }
 
-/**
- * Standalone canvas component (use if not using hook form).
- */
 export default function BallEffectsCanvas({
   viewBox = "-300 0 600 680",
   className = "",
@@ -239,27 +274,18 @@ export default function BallEffectsCanvas({
   const canvasRef = useRef(null);
   const { apiRef, attachCanvas } = useBallEffectsCanvas();
 
-  useEffect(() => {
-    if (canvasRef.current) attachCanvas(canvasRef.current, viewBox);
-    return () => apiRef.current.detach();
-  }, [attachCanvas, viewBox, apiRef]);
-
-  useEffect(() => {
-    let active = true;
-    const tick = () => {
-      if (!active) return;
-      apiRef.current.draw();
-      requestAnimationFrame(tick);
-    };
-    tick();
-    return () => {
-      active = false;
-    };
-  }, [apiRef]);
+  // attach on mount
+  const cbRef = useCallback(
+    (el) => {
+      canvasRef.current = el;
+      if (el) attachCanvas(el, viewBox);
+    },
+    [attachCanvas, viewBox],
+  );
 
   return (
     <canvas
-      ref={canvasRef}
+      ref={cbRef}
       className={`absolute inset-0 pointer-events-none z-10 ${className}`}
       style={{ willChange: "contents" }}
     />

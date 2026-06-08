@@ -23,148 +23,214 @@ import {
   PAYOUTS,
 } from "../utils/plinkoCoords";
 
-// ─── Bin color config ────────────────────────────────────────────────────────
-function getBinStyle(idx, total) {
+// ─── Bin color theme ──────────────────────────────────────────────────────────
+function getBinTheme(idx, total) {
   const mid = Math.floor(total / 2);
   const dist = Math.abs(idx - mid);
   const norm = dist / mid;
 
   if (norm >= 0.95)
     return {
-      border: "#f59e0b",
-      text: "#fbbf24",
-      glow: "rgba(245,158,11,0.55)",
+      grad0: "rgba(251,191,36,0.55)",
+      grad1: "rgba(217,119,6,0.18)",
+      stroke: "#f59e0b",
+      glow: "#f59e0b",
+      text: "#fde68a",
+      glowOpacity: 0.7,
     };
-  if (norm >= 0.75)
+  if (norm >= 0.72)
     return {
-      border: "#8b5cf6",
-      text: "#a78bfa",
-      glow: "rgba(139,92,246,0.45)",
+      grad0: "rgba(167,139,250,0.45)",
+      grad1: "rgba(109,40,217,0.15)",
+      stroke: "#8b5cf6",
+      glow: "#8b5cf6",
+      text: "#c4b5fd",
+      glowOpacity: 0.55,
     };
-  if (norm >= 0.5)
+  if (norm >= 0.45)
     return {
-      border: "#6366f1",
-      text: "#818cf8",
-      glow: "rgba(99,102,241,0.35)",
+      grad0: "rgba(99,102,241,0.38)",
+      grad1: "rgba(67,56,202,0.12)",
+      stroke: "#6366f1",
+      glow: "#818cf8",
+      text: "#a5b4fc",
+      glowOpacity: 0.45,
     };
-  if (norm >= 0.25)
-    return { border: "#22d3ee", text: "#67e8f9", glow: "rgba(34,211,238,0.3)" };
-  return { border: "rgba(148,163,184,0.25)", text: "#94a3b8", glow: "none" };
+  if (norm >= 0.22)
+    return {
+      grad0: "rgba(34,211,238,0.32)",
+      grad1: "rgba(6,182,212,0.10)",
+      stroke: "#22d3ee",
+      glow: "#22d3ee",
+      text: "#67e8f9",
+      glowOpacity: 0.4,
+    };
+  return {
+    grad0: "rgba(51,65,85,0.55)",
+    grad1: "rgba(15,23,42,0.35)",
+    stroke: "rgba(100,116,139,0.4)",
+    glow: "#64748b",
+    text: "#94a3b8",
+    glowOpacity: 0.2,
+  };
 }
 
-// ─── Peg Node ────────────────────────────────────────────────────────────────
+// ─── Peg ──────────────────────────────────────────────────────────────────────
 function PegNode({ peg, isActive, isHovered, onHover }) {
   return (
-    <g onMouseEnter={() => onHover(peg.id)} onMouseLeave={() => onHover(null)}>
-      {/* Ambient glow ring */}
+    <g
+      onMouseEnter={() => onHover(peg.id)}
+      onMouseLeave={() => onHover(null)}
+      style={{ cursor: "default" }}
+    >
+      {/* Soft ambient halo */}
       <circle
         cx={peg.x}
         cy={peg.y}
-        r={PEG_RADIUS + 5}
-        fill="url(#pegAmbient)"
-        opacity={isActive ? 0.9 : isHovered ? 0.35 : 0.08}
-        style={{ transition: "opacity 0.12s" }}
+        r={PEG_RADIUS + 6}
+        fill="url(#pegHalo)"
+        opacity={isActive ? 1 : isHovered ? 0.4 : 0.1}
+        style={{ transition: "opacity 0.1s" }}
       />
-      {/* Chrome peg body */}
+      {/* Chrome sphere */}
       <circle
         cx={peg.x}
         cy={peg.y}
         r={PEG_RADIUS}
         fill="url(#pegChrome)"
-        stroke={isActive ? "rgba(180,200,255,0.9)" : "rgba(255,255,255,0.18)"}
-        strokeWidth={isActive ? 1 : 0.6}
-        filter="url(#pegShadow)"
+        stroke={isActive ? "rgba(200,220,255,0.95)" : "rgba(255,255,255,0.20)"}
+        strokeWidth={isActive ? 1.2 : 0.7}
+        filter="url(#pegDrop)"
         style={{
-          transform: isActive ? "scale(1.3)" : "scale(1)",
+          transform: isActive
+            ? "scale(1.35)"
+            : isHovered
+              ? "scale(1.1)"
+              : "scale(1)",
           transformOrigin: `${peg.x}px ${peg.y}px`,
-          transition: "transform 0.08s ease-out, stroke 0.1s",
+          transition: "transform 0.07s cubic-bezier(0.34,1.56,0.64,1)",
         }}
       />
-      {/* Flash on impact */}
+      {/* Impact flash */}
       {isActive && (
         <circle
           cx={peg.x}
           cy={peg.y}
-          r={PEG_RADIUS}
-          fill="rgba(255,255,255,0.7)"
-          style={{ animation: "pegFlash 0.12s ease-out forwards" }}
+          r={PEG_RADIUS + 1}
+          fill="rgba(255,255,255,0.65)"
+          style={{ animation: "pegFlash 0.14s ease-out forwards" }}
         />
       )}
-      {/* Specular highlight */}
+      {/* Specular dot */}
       <circle
-        cx={peg.x - 1.4}
-        cy={peg.y - 1.6}
-        r={PEG_RADIUS * 0.28}
-        fill="rgba(255,255,255,0.82)"
+        cx={peg.x - 1.5}
+        cy={peg.y - 1.8}
+        r={PEG_RADIUS * 0.3}
+        fill="rgba(255,255,255,0.88)"
+        style={{ pointerEvents: "none" }}
       />
     </g>
   );
 }
 
-// ─── Bin Node ────────────────────────────────────────────────────────────────
+// ─── Bin (glass panel) ────────────────────────────────────────────────────────
 function BinNode({ bin, idx, total, isActive, shouldReduceMotion }) {
-  const [hovered, setHovered] = useState(false);
-  const style = getBinStyle(idx, total);
+  const [hov, setHov] = useState(false);
+  const t = getBinTheme(idx, total);
   const bw = COL_SPACING - 4;
+  const bh = 46;
+  const mid = bw / 2;
 
   return (
     <g
       transform={`translate(${bin.x}, ${bin.y})`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
     >
-      {/* Active glow behind bin */}
-      {isActive && (
-        <rect
-          x={-2}
-          y={-2}
-          width={bw + 4}
-          height={54}
-          rx={10}
-          fill={style.glow !== "none" ? style.glow : "rgba(34,211,238,0.2)"}
-          style={{
-            filter: "blur(8px)",
-            animation: "binGlowPulse 0.5s ease-out",
-          }}
-        />
-      )}
-      {/* Bin body */}
+      {/* Outer glow bloom */}
+      <rect
+        x={-4}
+        y={-4}
+        width={bw + 8}
+        height={bh + 8}
+        rx={12}
+        fill={t.glow}
+        opacity={
+          isActive ? t.glowOpacity * 0.9 : hov ? t.glowOpacity * 0.25 : 0
+        }
+        style={{ filter: "blur(10px)", transition: "opacity 0.3s" }}
+      />
+
+      {/* Glass body */}
       <rect
         width={bw}
-        height={48}
+        height={bh}
         rx={8}
-        fill={`url(#binGrad${idx})`}
-        stroke={
-          isActive
-            ? style.border
-            : hovered
-              ? "rgba(255,255,255,0.2)"
-              : "rgba(255,255,255,0.07)"
-        }
-        strokeWidth={isActive ? 1.5 : 0.8}
+        fill={`url(#binBody${idx})`}
         style={{
           transform: isActive
-            ? "scaleY(1.05)"
-            : hovered
-              ? "scaleY(1.02)"
+            ? "scaleY(1.06)"
+            : hov
+              ? "scaleY(1.03)"
               : "scaleY(1)",
-          transformOrigin: `${bw / 2}px 24px`,
-          transition: "transform 0.2s ease, stroke 0.15s",
-          filter: isActive
-            ? `drop-shadow(0 0 10px ${style.glow !== "none" ? style.glow : "rgba(34,211,238,0.5)"})`
-            : "none",
+          transformOrigin: `${mid}px ${bh / 2}px`,
+          transition: "transform 0.25s cubic-bezier(0.34,1.56,0.64,1)",
         }}
       />
+
+      {/* Top glass shine strip */}
+      <rect
+        x={2}
+        y={2}
+        width={bw - 4}
+        height={bh * 0.35}
+        rx={6}
+        fill="url(#binShine)"
+        opacity={0.55}
+        style={{ pointerEvents: "none" }}
+      />
+
+      {/* Active inner glow */}
+      {isActive && (
+        <rect
+          x={1}
+          y={1}
+          width={bw - 2}
+          height={bh - 2}
+          rx={7}
+          fill={t.glow}
+          opacity={0.18}
+          style={{ animation: "binPulse 0.6s ease-out forwards" }}
+        />
+      )}
+
+      {/* Border */}
+      <rect
+        width={bw}
+        height={bh}
+        rx={8}
+        fill="none"
+        stroke={isActive ? t.stroke : hov ? t.stroke : t.stroke}
+        strokeWidth={isActive ? 1.6 : hov ? 1.2 : 0.8}
+        opacity={isActive ? 1 : hov ? 0.7 : 0.4}
+        style={{ transition: "stroke-width 0.15s, opacity 0.15s" }}
+      />
+
       {/* Multiplier label */}
       <text
-        x={bw / 2}
-        y={30}
+        x={mid}
+        y={bh / 2 + 5}
         textAnchor="middle"
-        fill={isActive ? "#ffffff" : style.text}
-        fontSize={idx === 0 || idx === total ? "13" : "11"}
+        fill={isActive ? "#fff" : t.text}
+        fontSize={idx === 0 || idx === total ? "12" : "10"}
         fontWeight="700"
-        fontFamily="'Inter', sans-serif"
-        style={{ pointerEvents: "none", transition: "fill 0.15s" }}
+        fontFamily="'Inter','SF Pro Display',sans-serif"
+        letterSpacing="0.02em"
+        style={{
+          pointerEvents: "none",
+          transition: "fill 0.15s",
+          filter: isActive ? `drop-shadow(0 0 4px ${t.glow})` : "none",
+        }}
       >
         {bin.multiplier}x
       </text>
@@ -172,7 +238,7 @@ function BinNode({ bin, idx, total, isActive, shouldReduceMotion }) {
   );
 }
 
-// ─── Main Board ───────────────────────────────────────────────────────────────
+// ─── Board ────────────────────────────────────────────────────────────────────
 export default function PlinkoBoard({
   outcome,
   onAnimationComplete,
@@ -193,8 +259,8 @@ export default function PlinkoBoard({
   const containerRef = useRef(null);
   const ballRef = useRef(null);
   const canvasRef = useRef(null);
-  const animatingRef = useRef(false); // ✅ single animation guard
-  const pegTimeoutRef = useRef(null);
+  const animatingRef = useRef(false);
+  const pegTimeout = useRef(null);
 
   const shakeX = useMotionValue(0);
   const shakeY = useMotionValue(0);
@@ -203,20 +269,20 @@ export default function PlinkoBoard({
   const bins = generateBins();
   const { apiRef, attachCanvas } = useBallEffectsCanvas();
 
-  // ── Peg flash ──────────────────────────────────────────────────────────────
+  // ── Peg impact ──────────────────────────────────────────────────────────────
   const handleImpact = useCallback(
     (ev) => {
       apiRef.current.addSparks(ev.x, ev.y);
-      if (pegTimeoutRef.current) clearTimeout(pegTimeoutRef.current);
+      if (pegTimeout.current) clearTimeout(pegTimeout.current);
       setActivePeg(ev.pegId);
-      pegTimeoutRef.current = setTimeout(() => setActivePeg(null), 110);
+      pegTimeout.current = setTimeout(() => setActivePeg(null), 120);
     },
     [apiRef],
   );
 
-  // ── Per-frame ball position update ─────────────────────────────────────────
+  // ── Frame update ────────────────────────────────────────────────────────────
   const handleFrame = useCallback(
-    (sample, _elapsed, frameCount) => {
+    (sample, _e, fc) => {
       ballRef.current?.update({
         x: sample.x,
         y: sample.y,
@@ -226,7 +292,7 @@ export default function PlinkoBoard({
         velocity: sample.velocity,
         visible: true,
       });
-      if (frameCount % 2 === 0) {
+      if (fc % 2 === 0) {
         apiRef.current.addTrailPoint(
           sample.x,
           sample.y,
@@ -239,66 +305,72 @@ export default function PlinkoBoard({
     [apiRef, isGolden],
   );
 
-  // ── Camera shake ───────────────────────────────────────────────────────────
-  const triggerCameraShake = useCallback(
+  // ── Camera shake ────────────────────────────────────────────────────────────
+  const triggerShake = useCallback(
     (intensity) => {
       if (shouldReduceMotion || intensity < 3) return;
-      const shakes = [0, -intensity, intensity * 0.6, -intensity * 0.3, 0];
+      const seq = [
+        0,
+        -intensity,
+        intensity * 0.55,
+        -intensity * 0.25,
+        intensity * 0.1,
+        0,
+      ];
       let i = 0;
       const run = () => {
-        if (i >= shakes.length) {
+        if (i >= seq.length) {
           shakeX.set(0);
           shakeY.set(0);
           return;
         }
-        shakeX.set(shakes[i]);
-        shakeY.set(shakes[i] * 0.4);
+        shakeX.set(seq[i]);
+        shakeY.set(seq[i] * 0.35);
         i++;
-        setTimeout(run, 40);
+        setTimeout(run, 38);
       };
       run();
     },
     [shouldReduceMotion, shakeX, shakeY],
   );
 
-  // ── Animation complete ─────────────────────────────────────────────────────
+  // ── Animation complete ──────────────────────────────────────────────────────
   const handleComplete = useCallback(() => {
     if (!outcome) return;
-
-    // ✅ Reset animation guard FIRST so parent can allow next drop
+    // ✅ Reset guard FIRST
     animatingRef.current = false;
 
     const multiplier = outcome.payoutMultiplier ?? PAYOUTS[outcome.binIndex];
     setActiveBin(outcome.binIndex);
     setShowPayout(true);
     soundService.playWin(multiplier);
-    triggerCameraShake(multiplier);
+    triggerShake(multiplier);
     onLanding?.({ binIndex: outcome.binIndex, multiplier });
 
     if (!shouldReduceMotion) {
-      const binX = bins[outcome.binIndex];
-      const originX = (binX.centerX + 300) / 600;
-      const isBigWin = multiplier >= 5;
+      const bx = bins[outcome.binIndex];
+      const originX = (bx.centerX + 300) / 600;
       confetti({
-        particleCount: isBigWin ? 70 : 35,
-        spread: isBigWin ? 70 : 50,
-        origin: { x: originX, y: 0.78 },
-        colors: isBigWin
-          ? ["#fbbf24", "#f59e0b", "#8b5cf6", "#22d3ee"]
-          : ["#8b5cf6", "#22d3ee", "#a78bfa"],
-        ticks: 90,
+        particleCount: multiplier >= 5 ? 80 : 40,
+        spread: multiplier >= 5 ? 75 : 52,
+        origin: { x: Math.max(0.05, Math.min(0.95, originX)), y: 0.78 },
+        colors:
+          multiplier >= 5
+            ? ["#fbbf24", "#f59e0b", "#8b5cf6", "#22d3ee", "#fff"]
+            : ["#8b5cf6", "#22d3ee", "#a78bfa"],
+        ticks: 95,
         gravity: 1.1,
-        scalar: 0.82,
+        scalar: 0.8,
       });
     }
 
-    setTimeout(() => onAnimationComplete?.(), shouldReduceMotion ? 200 : 650);
+    setTimeout(() => onAnimationComplete?.(), shouldReduceMotion ? 200 : 680);
   }, [
     outcome,
     bins,
     onLanding,
     shouldReduceMotion,
-    triggerCameraShake,
+    triggerShake,
     onAnimationComplete,
   ]);
 
@@ -309,28 +381,27 @@ export default function PlinkoBoard({
     onComplete: handleComplete,
   });
 
-  // ── Attach canvas ──────────────────────────────────────────────────────────
+  // ── Attach canvas ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (canvasRef.current) attachCanvas(canvasRef.current, "-300 0 600 680");
     return () => apiRef.current.detach?.();
   }, [attachCanvas, apiRef]);
 
-  // ── ✅ FIXED: Only trigger on outcome change, not on isDropping or start/reset
-  // This is the core fix — effect fires exactly once per new outcome object.
+  // ── ✅ FIXED: only triggers on new outcome object ───────────────────────────
   useEffect(() => {
-    if (!outcome?.path) return; // no outcome yet
-    if (!isDropping) return; // drop was cancelled or already done
-    if (animatingRef.current) return; // already animating — hard block
+    if (!outcome?.path) return;
+    if (!isDropping) return;
+    if (animatingRef.current) return;
 
     animatingRef.current = true;
     setActiveBin(null);
     setShowPayout(false);
     apiRef.current.clear();
 
-    const startX = getDropStartX(outcome.dropColumn);
-    reset(startX, START_Y);
+    const sx = getDropStartX(outcome.dropColumn);
+    reset(sx, START_Y);
     ballRef.current?.update({
-      x: startX,
+      x: sx,
       y: START_Y,
       sx: 1,
       sy: 1,
@@ -338,26 +409,25 @@ export default function PlinkoBoard({
       visible: true,
     });
     start(outcome.path, outcome.dropColumn, outcome.binIndex);
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [outcome]); // ✅ ONLY outcome — not start/reset/apiRef/isDropping
+  }, [outcome]);
 
-  // ── Cleanup on unmount ─────────────────────────────────────────────────────
+  // ── Cleanup ─────────────────────────────────────────────────────────────────
   useEffect(
     () => () => {
       cancel();
-      if (pegTimeoutRef.current) clearTimeout(pegTimeoutRef.current);
+      if (pegTimeout.current) clearTimeout(pegTimeout.current);
     },
     [cancel],
   );
 
   const boardClass = compact
-    ? "relative w-full h-[360px] sm:h-[400px]"
-    : "relative w-full h-[360px] sm:h-[460px] md:h-[600px] lg:h-[680px]";
+    ? "relative w-full h-[320px] sm:h-[380px]"
+    : "relative w-full h-[340px] sm:h-[460px] md:h-[580px] lg:h-[660px]";
 
   return (
     <motion.div
-      className={`${boardClass} flex items-center justify-center`}
+      className={`${boardClass} flex items-center justify-center select-none`}
       style={{ x: shakeX, y: shakeY, willChange: "transform" }}
       animate={{ rotate: isTilt ? [0, 2.5, -2.5, 0] : 0 }}
       transition={
@@ -366,131 +436,169 @@ export default function PlinkoBoard({
           : {}
       }
     >
-      {/* Keyframes */}
       <style>{`
-        @keyframes pegFlash    { from { opacity: 0.7; } to { opacity: 0; } }
-        @keyframes binGlowPulse { 0% { opacity: 0.9; } 100% { opacity: 0.3; } }
+        @keyframes pegFlash    { 0%{opacity:0.8;} 100%{opacity:0;} }
+        @keyframes binPulse    { 0%{opacity:0.35;} 60%{opacity:0.22;} 100%{opacity:0;} }
+        @keyframes trailGlow   { 0%{opacity:1;} 100%{opacity:0;} }
       `}</style>
 
       <div ref={containerRef} className="relative w-full h-full">
-        {/* Board depth background */}
+        {/* Depth background */}
         <div className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_10%,rgba(139,92,246,0.13),transparent_65%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_30%_at_50%_90%,rgba(34,211,238,0.07),transparent_60%)]" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(139,92,246,0.14) 0%, transparent 70%)",
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse 60% 35% at 50% 92%, rgba(34,211,238,0.08) 0%, transparent 65%)",
+            }}
+          />
+          {/* Fine grid */}
           <svg
-            className="absolute inset-0 w-full h-full opacity-[0.025]"
-            xmlns="http://www.w3.org/2000/svg"
+            className="absolute inset-0 w-full h-full"
+            style={{ opacity: 0.028 }}
           >
             <defs>
               <pattern
-                id="boardGrid"
-                width="40"
-                height="40"
+                id="bg-grid"
+                width="44"
+                height="44"
                 patternUnits="userSpaceOnUse"
               >
                 <path
-                  d="M 40 0 L 0 0 0 40"
+                  d="M44 0L0 0 0 44"
                   fill="none"
                   stroke="white"
-                  strokeWidth="0.5"
+                  strokeWidth="0.6"
                 />
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#boardGrid)" />
+            <rect width="100%" height="100%" fill="url(#bg-grid)" />
           </svg>
         </div>
 
         <svg
           viewBox="-300 0 600 680"
           className="w-full h-full overflow-visible"
+          preserveAspectRatio="xMidYMid meet"
         >
           <defs>
-            {/* Peg drop shadow */}
-            <filter id="pegShadow" x="-60%" y="-60%" width="220%" height="220%">
+            {/* Peg filters */}
+            <filter id="pegDrop" x="-80%" y="-80%" width="260%" height="260%">
               <feDropShadow
                 dx="0"
-                dy="2"
+                dy="1.5"
                 stdDeviation="2"
                 floodColor="#000"
-                floodOpacity="0.6"
+                floodOpacity="0.55"
               />
             </filter>
+            <filter
+              id="pegGlowF"
+              x="-100%"
+              y="-100%"
+              width="300%"
+              height="300%"
+            >
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feComposite in="SourceGraphic" in2="b" operator="over" />
+            </filter>
 
-            {/* Chrome metallic peg gradient */}
-            <radialGradient id="pegChrome" cx="32%" cy="28%" r="55%">
+            {/* Chrome peg */}
+            <radialGradient id="pegChrome" cx="33%" cy="27%" r="56%">
               <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="20%" stopColor="#e8edf5" />
-              <stop offset="55%" stopColor="#8899bb" />
-              <stop offset="80%" stopColor="#445577" />
-              <stop offset="100%" stopColor="#1a2035" />
+              <stop offset="18%" stopColor="#ecf0fb" />
+              <stop offset="48%" stopColor="#8fa4cc" />
+              <stop offset="76%" stopColor="#3d5280" />
+              <stop offset="100%" stopColor="#111827" />
             </radialGradient>
 
-            {/* Peg ambient glow */}
-            <radialGradient id="pegAmbient">
-              <stop offset="0%" stopColor="rgba(100,160,255,0.8)" />
-              <stop offset="100%" stopColor="rgba(100,160,255,0)" />
+            {/* Peg halo */}
+            <radialGradient id="pegHalo">
+              <stop offset="0%" stopColor="rgba(148,172,255,0.9)" />
+              <stop offset="100%" stopColor="rgba(148,172,255,0)" />
             </radialGradient>
 
-            {/* Per-bin gradients */}
-            {bins.map((_, idx) => {
+            {/* Ball gradients */}
+            <radialGradient id="ballChrome" cx="30%" cy="26%" r="56%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="14%" stopColor="#f0f4ff" />
+              <stop offset="38%" stopColor="#c8d4f0" />
+              <stop offset="65%" stopColor="#5a7ab0" />
+              <stop offset="85%" stopColor="#1e3a5f" />
+              <stop offset="100%" stopColor="#0a1628" />
+            </radialGradient>
+            <radialGradient id="ballGold" cx="30%" cy="26%" r="56%">
+              <stop offset="0%" stopColor="#fffbeb" />
+              <stop offset="18%" stopColor="#fef08a" />
+              <stop offset="42%" stopColor="#eab308" />
+              <stop offset="70%" stopColor="#92400e" />
+              <stop offset="100%" stopColor="#3c1a06" />
+            </radialGradient>
+
+            {/* Glass shine strip */}
+            <linearGradient id="binShine" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            </linearGradient>
+
+            {/* Per-bin body gradients */}
+            {bins.map((_, i) => {
               const total = bins.length - 1;
-              const mid = Math.floor(total / 2);
-              const norm = Math.abs(idx - mid) / mid;
-              const top =
-                norm >= 0.95
-                  ? "rgba(245,158,11,0.4)"
-                  : norm >= 0.75
-                    ? "rgba(139,92,246,0.35)"
-                    : norm >= 0.5
-                      ? "rgba(99,102,241,0.28)"
-                      : norm >= 0.25
-                        ? "rgba(34,211,238,0.22)"
-                        : "rgba(30,41,59,0.4)";
+              const th = getBinTheme(i, total);
               return (
                 <linearGradient
-                  key={idx}
-                  id={`binGrad${idx}`}
+                  key={i}
+                  id={`binBody${i}`}
                   x1="0"
                   y1="0"
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="0%" stopColor={top} />
-                  <stop offset="100%" stopColor="rgba(10,12,28,0.85)" />
+                  <stop offset="0%" stopColor={th.grad0} />
+                  <stop offset="100%" stopColor={th.grad1} />
                 </linearGradient>
               );
             })}
           </defs>
 
           {/* Drop column indicator */}
-          {outcome && (
+          {!isDropping && outcome == null && (
             <>
               <line
-                x1={getDropStartX(outcome.dropColumn)}
+                x1={getDropStartX(6)}
                 y1={0}
-                x2={getDropStartX(outcome.dropColumn)}
-                y2={START_Y - 2}
-                stroke="rgba(34,211,238,0.35)"
-                strokeWidth="1"
-                strokeDasharray="3 3"
-              />
-              <circle
-                cx={getDropStartX(outcome.dropColumn)}
-                cy={-6}
-                r={3}
-                fill="rgba(34,211,238,0.5)"
+                x2={getDropStartX(6)}
+                y2={22}
+                stroke="rgba(34,211,238,0.3)"
+                strokeWidth="1.2"
+                strokeDasharray="3 4"
               />
             </>
           )}
+          {outcome && !animatingRef.current && (
+            <circle
+              cx={getDropStartX(outcome.dropColumn)}
+              cy={-8}
+              r={3.5}
+              fill="rgba(34,211,238,0.55)"
+            />
+          )}
 
           {/* Bins */}
-          {bins.map((bin, idx) => (
+          {bins.map((bin, i) => (
             <BinNode
               key={bin.id}
               bin={bin}
-              idx={idx}
+              idx={i}
               total={bins.length - 1}
-              isActive={activeBin === idx}
+              isActive={activeBin === i}
               shouldReduceMotion={shouldReduceMotion}
             />
           ))}
@@ -507,11 +615,11 @@ export default function PlinkoBoard({
               {isDebug && (
                 <text
                   x={peg.x}
-                  y={peg.y - 9}
+                  y={peg.y - 10}
                   fontSize="5"
                   fill="#22d3ee"
                   textAnchor="middle"
-                  opacity={0.65}
+                  opacity={0.6}
                   fontFamily="monospace"
                 >
                   {peg.row},{peg.col}
@@ -521,14 +629,14 @@ export default function PlinkoBoard({
           ))}
         </svg>
 
-        {/* Effects canvas */}
+        {/* Canvas effects layer */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 pointer-events-none z-10"
           style={{ willChange: "contents" }}
         />
 
-        {/* Ball DOM overlay */}
+        {/* Ball overlay */}
         <BallOverlay
           ref={ballRef}
           isGolden={isGolden}
@@ -540,24 +648,43 @@ export default function PlinkoBoard({
       <AnimatePresence>
         {showPayout && outcome && (
           <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.88 }}
+            key="payout-toast"
+            initial={{ opacity: 0, y: 18, scale: 0.85 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.94 }}
-            transition={{ type: "spring", stiffness: 320, damping: 26 }}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none z-30"
+            exit={{ opacity: 0, y: -12, scale: 0.92 }}
+            transition={{ type: "spring", stiffness: 340, damping: 28 }}
+            className="absolute bottom-10 left-1/2 -translate-x-1/2 pointer-events-none z-30"
           >
-            <div className="px-6 py-3 rounded-2xl text-center backdrop-blur-md border border-white/10 bg-black/50">
-              <div className="text-[10px] uppercase tracking-widest text-slate-400 mb-0.5 font-medium">
+            <div
+              className="px-7 py-3.5 rounded-2xl text-center"
+              style={{
+                background: "rgba(5,8,22,0.75)",
+                backdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                boxShadow:
+                  "0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
+              }}
+            >
+              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400 mb-0.5 font-medium">
                 Payout
               </div>
-              <div className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent leading-tight">
+              <div
+                className="text-2xl font-bold leading-tight"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #67e8f9 0%, #a78bfa 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  filter: "drop-shadow(0 0 8px rgba(167,139,250,0.5))",
+                }}
+              >
                 {(
                   outcome.payoutMultiplier ?? PAYOUTS[outcome.binIndex]
                 ).toFixed(1)}
                 x
               </div>
               {outcome.betCents && (
-                <div className="text-sm text-emerald-400 font-mono mt-0.5">
+                <div className="text-sm text-emerald-400 font-mono mt-0.5 font-semibold">
                   +$
                   {(
                     (outcome.betCents / 100) *
@@ -570,10 +697,16 @@ export default function PlinkoBoard({
         )}
       </AnimatePresence>
 
-      {/* Debug overlay */}
       {isDebug && (
-        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[9px] font-mono text-cyan-400 z-30 backdrop-blur-sm border border-cyan-500/20 bg-black/40">
-          DEBUG: GRID ACTIVE
+        <div
+          className="absolute top-3 left-3 z-30 px-2.5 py-1 rounded-lg text-[9px] font-mono text-cyan-400"
+          style={{
+            background: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(34,211,238,0.2)",
+          }}
+        >
+          DEBUG · GRID ACTIVE
         </div>
       )}
     </motion.div>
