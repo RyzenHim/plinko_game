@@ -3,10 +3,12 @@ import axios from "axios";
 const API_URL =
   "http://localhost:8080/api" || "https://plinko-game-j0ej.onrender.com/api";
 
+//axios instance
 const api = axios.create({
   baseURL: API_URL,
 });
 
+// axios serices
 export const roundsService = {
   commit: async () => {
     const response = await api.post("/rounds/commit");

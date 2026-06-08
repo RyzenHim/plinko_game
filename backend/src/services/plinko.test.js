@@ -4,12 +4,13 @@ const prngService = require("./prng.service");
 const plinkoService = require("./plinko.service");
 
 describe("Plinko Lab Fairness & Engine", () => {
-  
   // 1. SHA256 Correctness
   it("should generate correct SHA256 hashes", () => {
     const hash = hashService.sha256("hello");
     // Expected SHA256 of "hello"
-    expect(hash).toBe("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+    expect(hash).toBe(
+      "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+    );
   });
 
   // 2. xorshift32 Reproducibility
@@ -32,7 +33,7 @@ describe("Plinko Lab Fairness & Engine", () => {
       serverSeed: "ss-1",
       clientSeed: "cs-1",
       nonce: "n-1",
-      dropColumn: 6
+      dropColumn: 6,
     };
 
     const run1 = plinkoService.executeRound(inputs);
@@ -44,12 +45,12 @@ describe("Plinko Lab Fairness & Engine", () => {
     expect(run1.outcome.path).toEqual(run2.outcome.path);
   });
 
-  // 4. Commit-Reveal Validation
+  // 4. Commit-Reveal Validation PRNG
   it("should verify that commitHex matches (serverSeed + nonce)", () => {
     const serverSeed = "secret-server-seed";
     const nonce = "42";
     const commitHex = hashService.generateCommit(serverSeed, nonce);
-    
+
     // Verifier side
     const recomputedCommit = hashService.sha256(`${serverSeed}:${nonce}`);
     expect(commitHex).toBe(recomputedCommit);
@@ -61,18 +62,27 @@ describe("Plinko Lab Fairness & Engine", () => {
   // nonce = "42"
   // clientSeed = "candidate-hello"
   it("should match official test vectors for commitHex and combinedSeed", () => {
-    const serverSeed = "b2a5f3f32a4d9c6ee7a8c1d33456677890abcdeffedcba0987654321ffeeddcc";
+    const serverSeed =
+      "b2a5f3f32a4d9c6ee7a8c1d33456677890abcdeffedcba0987654321ffeeddcc";
     const nonce = "42";
     const clientSeed = "candidate-hello";
 
     const commitHex = hashService.generateCommit(serverSeed, nonce);
-    const combinedSeed = hashService.generateCombinedSeed(serverSeed, clientSeed, nonce);
+    const combinedSeed = hashService.generateCombinedSeed(
+      serverSeed,
+      clientSeed,
+      nonce,
+    );
 
     // From PDF:
     // commitHex = bb9acdc67f3f18f3345236a01f0e5072596657a9005c7d8a22cff061451a6b34
     // combinedSeed = e1dddf77de27d395ea2be2ed49aa2a59bd6bf12ee8d350c16c008abd406c07e0
-    
-    expect(commitHex).toBe("bb9acdc67f3f18f3345236a01f0e5072596657a9005c7d8a22cff061451a6b34");
-    expect(combinedSeed).toBe("e1dddf77de27d395ea2be2ed49aa2a59bd6bf12ee8d350c16c008abd406c07e0");
+
+    expect(commitHex).toBe(
+      "bb9acdc67f3f18f3345236a01f0e5072596657a9005c7d8a22cff061451a6b34",
+    );
+    expect(combinedSeed).toBe(
+      "e1dddf77de27d395ea2be2ed49aa2a59bd6bf12ee8d350c16c008abd406c07e0",
+    );
   });
 });

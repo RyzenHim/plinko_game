@@ -1,21 +1,19 @@
 const plinkoService = require("../services/plinko.service");
 const hashService = require("../services/hash.service");
 
-/**
- * GET /api/verify
- * Recomputes the outcome from inputs for verification.
- */
 async function verifyRound(req, res) {
   const { serverSeed, clientSeed, nonce, dropColumn } = req.query;
 
   if (!serverSeed || !clientSeed || !nonce || dropColumn === undefined) {
-    return res.status(400).json({ error: "Missing required verification parameters." });
+    return res
+      .status(400)
+      .json({ error: "Missing required verification parameters." });
   }
 
   try {
     const dc = parseInt(dropColumn, 10);
     const commitHex = hashService.generateCommit(serverSeed, nonce);
-    
+
     const { combinedSeed, outcome } = plinkoService.executeRound({
       serverSeed,
       clientSeed,
@@ -29,7 +27,7 @@ async function verifyRound(req, res) {
       pegMapHash: outcome.pegMapHash,
       binIndex: outcome.binIndex,
       // Adding path for frontend verifier to render replay
-      path: outcome.path
+      path: outcome.path,
     });
   } catch (error) {
     console.error("Verify Error:", error);

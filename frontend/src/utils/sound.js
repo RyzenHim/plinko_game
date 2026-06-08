@@ -21,6 +21,7 @@ const getCtx = () => {
 
 export const soundService = {
   getMute: () => isMuted,
+
   setMute: (val) => {
     isMuted = val;
     localStorage.setItem("plinko-muted", val.toString());
@@ -96,7 +97,7 @@ export const soundService = {
     oscMid.frequency.setValueAtTime(160, now);
     oscMid.frequency.exponentialRampToValueAtTime(60, now + 0.09);
     gainMid.gain.setValueAtTime(0.04, now);
-    gainMid.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+    gainMid.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
     oscMid.connect(gainMid);
     gainMid.connect(ctx.destination);
 
@@ -116,7 +117,7 @@ export const soundService = {
     oscMid.start(now);
     oscRing.start(now);
 
-    oscLow.stop(now + 0.20);
+    oscLow.stop(now + 0.2);
     oscMid.stop(now + 0.11);
     oscRing.stop(now + 0.08);
   },
@@ -132,15 +133,15 @@ export const soundService = {
       // Use triangle for a soft, premium organic chime feel (Apple UI sounds style)
       osc.type = "triangle";
       osc.frequency.setValueAtTime(freq, startTime);
-      
+
       // Clean smooth volume envelope with soft rise and decay
       gain.gain.setValueAtTime(0, startTime);
       gain.gain.linearRampToValueAtTime(vol, startTime + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      
+
       osc.connect(gain);
       gain.connect(ctx.destination);
-      
+
       osc.start(startTime);
       osc.stop(startTime + duration);
     };
@@ -151,22 +152,27 @@ export const soundService = {
       // Enhanced Celebration Chime: Lush, arpeggiated C major 9th chord
       // Notes: C5 (523.25), E5 (659.25), G5 (783.99), B5 (987.77), D6 (1174.66), G6 (1567.98)
       const chord = [523.25, 659.25, 783.99, 987.77, 1174.66, 1567.98];
-      const startTimes = [0, 0.04, 0.08, 0.12, 0.16, 0.20];
+      const startTimes = [0, 0.04, 0.08, 0.12, 0.16, 0.2];
       chord.forEach((freq, idx) => {
-        playChimeNote(freq, now + startTimes[idx], 0.35 - idx * 0.02, baseVol * 0.7);
+        playChimeNote(
+          freq,
+          now + startTimes[idx],
+          0.35 - idx * 0.02,
+          baseVol * 0.7,
+        );
       });
     } else if (multiplier >= 2) {
       // Medium Multiplier: Warm arpeggiated major triad
       // Notes: C5 (523.25), E5 (659.25), G5 (783.99), C6 (1046.50)
-      const chord = [523.25, 659.25, 783.99, 1046.50];
-      const startTimes = [0, 0.05, 0.10, 0.15];
+      const chord = [523.25, 659.25, 783.99, 1046.5];
+      const startTimes = [0, 0.05, 0.1, 0.15];
       chord.forEach((freq, idx) => {
         playChimeNote(freq, now + startTimes[idx], 0.25, baseVol * 0.75);
       });
     } else {
       // Low Multiplier: Warm, elegant UI confirmation chime (E5 -> G5)
       // Notes: E5 (659.25), G5 (783.99)
-      playChimeNote(659.25, now, 0.20, baseVol * 0.6);
+      playChimeNote(659.25, now, 0.2, baseVol * 0.6);
       playChimeNote(783.99, now + 0.06, 0.25, baseVol * 0.6);
     }
   },

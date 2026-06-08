@@ -8,7 +8,7 @@ export default function HeroSection() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="text-center mb-4 md:mb-8"
+      className="text-center mb-4 md:mb-8x"
     >
       <div className="flex items-center justify-center gap-2 mb-2 md:mb-4">
         <span className="badge-fair text-[9px] px-2 py-0.5">Provably Fair</span>
@@ -25,11 +25,6 @@ export default function HeroSection() {
           Lab
         </span>
       </h1>
-
-      <p className="text-xs md:text-sm text-zinc-500 max-w-md mx-auto leading-relaxed px-4 hidden sm:block">
-        Drop the ball through 12 rows of pegs. Every outcome is deterministic,
-        pre-committed, and independently verifiable.
-      </p>
     </motion.header>
   );
 }

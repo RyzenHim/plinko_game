@@ -699,7 +699,7 @@ export default function Controls({
       </div>
 
       {/* Provably fair hashes */}
-      {roundId && (
+      {/* {roundId && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <HashBlock label="Round ID" value={roundId} />
           <HashBlock label="Commit Hash" value={commitHex} />
@@ -720,7 +720,7 @@ export default function Controls({
             Verify Round →
           </button>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
