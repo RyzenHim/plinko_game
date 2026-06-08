@@ -167,7 +167,7 @@ export default function HomePage() {
       <NeonLoadingOverlay visible={isServerLoading} />
       <BackgroundEffects />
 
-      <div className="relative z-10 px-4 md:px-8 py-6 md:py-10 max-w-[1400px] mx-auto">
+      <div className="relative z-10 px-3 md:px-5 pt-4 pb-4 md:pb-2 max-w-[1400px] mx-auto">
         <HeroSection />
 
         {/* Main grid */}
@@ -239,7 +239,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <footer className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 text-zinc-600 text-xs">
+        <footer className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-zinc-600 text-xs">
           <span>Daphnis Labs — Full-Stack Assignment</span>
           <div className="flex gap-6">
             <a href="/verify" className="hover:text-cyan-400 transition-colors">
