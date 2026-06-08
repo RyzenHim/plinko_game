@@ -35,7 +35,7 @@ export default function CopyButton({ text, label = "Copy" }) {
             className="flex items-center gap-1.5 text-emerald-400"
           >
             <FaCheck className="w-3 h-3" />
-            Copied
+            Copiedddddddddddddddddddddddddddddddddddddddddddd
           </motion.span>
         ) : (
           <motion.span
