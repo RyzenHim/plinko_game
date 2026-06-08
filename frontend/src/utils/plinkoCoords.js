@@ -1,9 +1,11 @@
+// plinkoCoords.js — board layout constants and position helpers
+
 export const ROWS = 12;
 export const PEG_RADIUS = 5;
 export const BALL_RADIUS = 9;
-export const ROW_SPACING = 48; // Increased from 42 to fill more vertical space
-export const COL_SPACING = 50; // Increased from 46 to fill width
-export const START_Y = 8;      // Reduced from 18 to minimize spawn dead space
+export const ROW_SPACING = 48;
+export const COL_SPACING = 50;
+export const START_Y = 8;
 
 export const PAYOUTS = [10, 5, 3, 2, 1.5, 1.2, 1, 1.2, 1.5, 2, 3, 5, 10];
 
@@ -11,7 +13,7 @@ export function getPegPosition(row, col) {
   const rowOffset = (ROWS - row) * (COL_SPACING / 2) - (ROWS * COL_SPACING) / 2;
   return {
     x: rowOffset + col * COL_SPACING,
-    y: row * ROW_SPACING + 26, // Reduced top padding from 52 to 26
+    y: row * ROW_SPACING + 26,
   };
 }
 
@@ -21,7 +23,7 @@ export function getDropStartX(dropColumn) {
 
 export function getBinPosition(binIndex) {
   const x = -((ROWS * COL_SPACING) / 2) + binIndex * COL_SPACING;
-  const y = ROWS * ROW_SPACING + 33; // Centered landing Y position for ball
+  const y = ROWS * ROW_SPACING + 33;
   return { x, y };
 }
 
@@ -37,7 +39,7 @@ export function generatePegs() {
 }
 
 export function generateBins() {
-  const binY = ROWS * ROW_SPACING + 30; // Shifted up layout-wise
+  const binY = ROWS * ROW_SPACING + 30;
   const binWidth = COL_SPACING;
   const bins = [];
   for (let i = 0; i <= ROWS; i++) {

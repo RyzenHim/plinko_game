@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "https://plinko-game-j0ej.onrender.com/api";
+const API_URL =
+  "http://localhost:8080/api" || "https://plinko-game-j0ej.onrender.com/api";
 
 const api = axios.create({
   baseURL: API_URL,

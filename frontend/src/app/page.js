@@ -24,13 +24,18 @@ export default function HomePage() {
   const [recentResults, setRecentResults] = useState([]);
   const [revealedSeed, setRevealedSeed] = useState(null);
   const [landingHistory, setLandingHistory] = useState([]);
+
   const secretBufferRef = useRef("");
+  // ✅ StrictMode guard — prevents double initRound() in dev
+  const initCalledRef = useRef(false);
+  // ✅ Drop guard — prevents any double-drop race condition
+  const droppingRef = useRef(false);
 
   const isGolden =
     landingHistory.length >= 3 &&
     landingHistory.slice(-3).every((b) => b === 6);
 
-  const initRound = async () => {
+  const initRound = useCallback(async () => {
     try {
       const round = await roundsService.commit();
       setCurrentRound(round);
@@ -39,16 +44,22 @@ export default function HomePage() {
     } catch (error) {
       console.error("Failed to init round", error);
     }
-  };
-
-  useEffect(() => {
-    initRound();
   }, []);
 
-  const handleDrop = useCallback(async () => {
-    if (isDropping || !currentRound) return;
+  // ✅ Runs once — StrictMode safe
+  useEffect(() => {
+    if (initCalledRef.current) return;
+    initCalledRef.current = true;
+    initRound();
+  }, [initRound]);
 
+  const handleDrop = useCallback(async () => {
+    // ✅ Double guard: both state and ref checked
+    if (isDropping || droppingRef.current || !currentRound) return;
+
+    droppingRef.current = true;
     setIsDropping(true);
+
     try {
       const result = await roundsService.start(currentRound.roundId, {
         clientSeed,
@@ -66,6 +77,8 @@ export default function HomePage() {
       });
     } catch (error) {
       console.error("Drop failed", error);
+      // ✅ Reset both guards on error
+      droppingRef.current = false;
       setIsDropping(false);
     }
   }, [isDropping, currentRound, clientSeed, betAmount, dropColumn]);
@@ -88,7 +101,9 @@ export default function HomePage() {
     [betAmount, currentRound],
   );
 
-  const onAnimationComplete = async () => {
+  const onAnimationComplete = useCallback(async () => {
+    // ✅ Reset both guards so next drop is allowed
+    droppingRef.current = false;
     setIsDropping(false);
 
     if (dungeonRoundsLeft > 0) {
@@ -97,28 +112,26 @@ export default function HomePage() {
     }
 
     try {
-      // Only reveal if current round is not already revealed.
-      // (Prevents repeated reveal calls from hitting backend 400s.)
       const reveal = await roundsService.reveal(currentRound.roundId);
       setRevealedSeed(reveal.serverSeed);
       setTimeout(initRound, 2500);
     } catch (error) {
       console.error("Reveal failed", error);
+      // Still init next round even if reveal fails
+      setTimeout(initRound, 2500);
     }
-  };
+  }, [dungeonRoundsLeft, currentRound, initRound]);
 
-  // Keyboard listeners
+  // Keyboard listeners — single source of truth, no duplicate in Controls
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (isDropping) return;
-
       if (e.key === "ArrowLeft") {
         setDropColumn((prev) => Math.max(0, prev - 1));
       } else if (e.key === "ArrowRight") {
         setDropColumn((prev) => Math.min(12, prev + 1));
       } else if (e.key === " ") {
         e.preventDefault();
-        handleDrop();
+        if (!isDropping && !droppingRef.current) handleDrop();
       }
 
       if (e.key.toLowerCase() === "t") {
@@ -154,7 +167,7 @@ export default function HomePage() {
 
         {/* Main grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
-          {/* Controls — left (comes first on mobile, order-1) */}
+          {/* Controls — left */}
           <div className="lg:col-span-3 order-1 lg:order-1">
             <Controls
               betAmount={betAmount}
@@ -170,7 +183,7 @@ export default function HomePage() {
             />
           </div>
 
-          {/* Board — center (comes second on mobile, order-2) */}
+          {/* Board — center */}
           <div className="lg:col-span-6 order-2 lg:order-2">
             <div className="glass-panel rounded-3xl p-3 md:p-6 relative overflow-hidden">
               {/* Board rim lighting */}
@@ -208,7 +221,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Side panel — right (comes third on mobile, order-3) */}
+          {/* Side panel — right */}
           <div className="lg:col-span-3 order-3 lg:order-3 flex flex-col gap-5">
             <FairnessPanel
               roundId={currentRound?.roundId}

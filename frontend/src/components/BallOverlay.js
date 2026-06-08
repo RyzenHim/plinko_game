@@ -5,9 +5,13 @@ import { forwardRef, useImperativeHandle, useRef, useEffect } from "react";
 const VIEWBOX = { x: -300, y: 0, w: 600, h: 680 };
 
 /**
- * Imperative ball layer — translate3d only, updated from RAF (no React re-renders).
+ * Imperative ball DOM layer.
+ * Positioned via translate3d only — zero React re-renders during animation.
  */
-const BallOverlay = forwardRef(function BallOverlay({ isGolden = false, containerRef }, ref) {
+const BallOverlay = forwardRef(function BallOverlay(
+  { isGolden = false, containerRef },
+  ref,
+) {
   const rootRef = useRef(null);
   const glowRef = useRef(null);
   const sizeRef = useRef({ w: 1, h: 1 });
@@ -40,10 +44,14 @@ const BallOverlay = forwardRef(function BallOverlay({ isGolden = false, containe
       const { px, py } = toPixel(x, y);
       el.style.opacity = visible ? "1" : "0";
       el.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%) scale3d(${sx}, ${sy}, 1) rotate(${rot}deg)`;
+
       if (glowRef.current) {
-        const blur = Math.min(6, 2 + velocity * 0.06);
-        glowRef.current.style.filter = `blur(${blur}px)`;
-        glowRef.current.style.opacity = String(Math.min(0.9, 0.4 + velocity * 0.03));
+        // Velocity-driven glow intensity
+        const intensity = Math.min(1, velocity * 0.04);
+        const blur = 3 + velocity * 0.07;
+        glowRef.current.style.filter = `blur(${blur.toFixed(1)}px)`;
+        glowRef.current.style.opacity = (0.35 + intensity * 0.55).toFixed(2);
+        glowRef.current.style.transform = `scale(${1 + intensity * 0.4})`;
       }
     },
     hide() {
@@ -51,84 +59,138 @@ const BallOverlay = forwardRef(function BallOverlay({ isGolden = false, containe
     },
   }));
 
+  const BALL_SIZE = 18;
+
   return (
     <div
       ref={rootRef}
       className="absolute top-0 left-0 z-20 pointer-events-none"
       style={{ willChange: "transform, opacity", opacity: 0 }}
     >
+      {/* Contact shadow */}
       <div
-        className="absolute rounded-full"
         style={{
-          width: 18,
-          height: 6,
+          position: "absolute",
+          width: BALL_SIZE * 1.1,
+          height: BALL_SIZE * 0.3,
           left: "50%",
           top: "100%",
-          marginLeft: -9,
-          marginTop: 5,
-          background: "rgba(0,0,0,0.5)",
-          filter: "blur(4px)",
+          marginLeft: `-${BALL_SIZE * 0.55}px`,
+          marginTop: "4px",
+          background:
+            "radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 70%)",
+          filter: "blur(3px)",
+          borderRadius: "50%",
         }}
       />
+
+      {/* Velocity glow halo */}
       <div
         ref={glowRef}
-        className="absolute rounded-full"
         style={{
-          width: 24,
-          height: 24,
+          position: "absolute",
+          width: BALL_SIZE * 2.2,
+          height: BALL_SIZE * 2.2,
           left: "50%",
           top: "50%",
-          marginLeft: -12,
-          marginTop: -12,
+          marginLeft: `-${BALL_SIZE * 1.1}px`,
+          marginTop: `-${BALL_SIZE * 1.1}px`,
+          borderRadius: "50%",
           background: isGolden
-            ? "radial-gradient(circle, rgba(251,191,36,0.12) 0%, transparent 70%)"
-            : "radial-gradient(circle, rgba(226,232,240,0.10) 0%, transparent 70%)",
-          willChange: "filter, opacity",
+            ? "radial-gradient(circle, rgba(251,191,36,0.25) 0%, rgba(234,179,8,0.1) 45%, transparent 70%)"
+            : "radial-gradient(circle, rgba(148,180,255,0.22) 0%, rgba(100,140,255,0.08) 45%, transparent 70%)",
+          willChange: "filter, opacity, transform",
+          transition: "none",
         }}
       />
+
+      {/* Ball sphere */}
       <div
-        className="relative rounded-full"
         style={{
-          width: 18,
-          height: 18,
+          position: "relative",
+          width: BALL_SIZE,
+          height: BALL_SIZE,
+          borderRadius: "50%",
           background: isGolden
-            ? "radial-gradient(circle at 30% 30%, #fffbeb 0%, #fef08a 12%, #eab308 35%, #a16207 65%, #451a03 100%)"
-            : "radial-gradient(circle at 30% 30%, #ffffff 0%, #f1f5f9 12%, #cbd5e1 28%, #64748b 55%, #1e293b 80%, #0f172a 100%)",
+            ? `radial-gradient(circle at 32% 28%,
+                #fffbeb 0%,
+                #fef08a 10%,
+                #fde047 24%,
+                #eab308 45%,
+                #a16207 70%,
+                #78350f 88%,
+                #3c1a06 100%)`
+            : `radial-gradient(circle at 30% 26%,
+                #ffffff 0%,
+                #f1f5f9 10%,
+                #e2e8f0 22%,
+                #94a3b8 45%,
+                #475569 68%,
+                #1e293b 84%,
+                #0f172a 100%)`,
           boxShadow: isGolden
-            ? "0 4px 8px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -2px 3px rgba(0,0,0,0.6)"
-            : "0 4px 8px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -2px 3px rgba(0,0,0,0.6)",
+            ? `0 3px 10px rgba(0,0,0,0.6),
+               inset 0 1.5px 2px rgba(255,255,255,0.85),
+               inset 0 -2px 4px rgba(0,0,0,0.7),
+               0 0 12px rgba(234,179,8,0.4)`
+            : `0 3px 10px rgba(0,0,0,0.6),
+               inset 0 1.5px 2px rgba(255,255,255,0.85),
+               inset 0 -2px 4px rgba(0,0,0,0.7),
+               0 0 8px rgba(148,163,184,0.25)`,
         }}
       >
-        {/* Specular Highlight Glint */}
+        {/* Primary specular glint */}
         <div
-          className="absolute rounded-full"
           style={{
-            width: 4,
-            height: 4,
-            top: 2,
-            left: 2.5,
+            position: "absolute",
+            width: 4.5,
+            height: 4.5,
+            top: 2.5,
+            left: 3,
+            borderRadius: "50%",
             background: "#ffffff",
-            boxShadow: "0 0 2px 0.5px rgba(255,255,255,0.8)",
+            boxShadow: "0 0 3px 1px rgba(255,255,255,0.9)",
           }}
         />
-        {/* Environment Horizon Line Reflection */}
+
+        {/* Secondary micro-glint */}
         <div
-          className="absolute inset-0 rounded-full"
           style={{
-            background: "linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, transparent 45%, rgba(0,0,0,0.25) 50%, rgba(255,255,255,0.1) 100%)",
+            position: "absolute",
+            width: 1.8,
+            height: 1.8,
+            top: 7,
+            left: 3.5,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.6)",
+          }}
+        />
+
+        {/* Environment horizon reflection band */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 42%, rgba(0,0,0,0.22) 50%, rgba(255,255,255,0.08) 100%)",
             mixBlendMode: "overlay",
           }}
         />
-        {/* Bottom Bounce Light Reflection */}
+
+        {/* Bottom fill-light (simulates surface bounce light) */}
         <div
-          className="absolute rounded-full"
           style={{
-            width: 5,
-            height: 2.5,
-            bottom: 2,
+            position: "absolute",
+            width: 6,
+            height: 3,
+            bottom: 2.5,
             right: 3,
-            background: "rgba(255,255,255,0.25)",
-            filter: "blur(0.5px)",
+            borderRadius: "50%",
+            background: isGolden
+              ? "rgba(255,240,180,0.3)"
+              : "rgba(180,200,255,0.22)",
+            filter: "blur(1px)",
           }}
         />
       </div>
